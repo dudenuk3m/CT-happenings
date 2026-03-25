@@ -33,7 +33,7 @@ export function EntryView({ config, addLog, showToast }: EntryViewProps) {
     <div className="flex flex-col gap-6">
       <section className="bg-white border border-[#d6cfc4] rounded p-5 shadow-sm">
         <label className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#7a7060] mb-3 block flex items-center gap-2">
-          <MapPin size={12} /> Hospital Site
+          <MapPin size={12} /> Hospital Site ({config.hospitals.length})
         </label>
         <select 
           value={hospital} 

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Trash2, Search, Download, Share, FileText, MapPin, Calendar } from "lucide-react";
+import { Trash2, Search, Download, Share, FileText, MapPin, Calendar, Pencil, Check, X } from "lucide-react";
 import { BarRow } from "./BarRow";
 
 export interface OverviewViewProps {
@@ -8,18 +8,42 @@ export interface OverviewViewProps {
   config: any;
   showToast: (m: string) => void;
   deleteLog: (id: string) => Promise<void>;
+  updateLog: (id: string, entry: any) => Promise<void>;
 }
 
-export function OverviewView({ logs, config, showToast, deleteLog }: OverviewViewProps) {
+export function OverviewView({ logs, config, showToast, deleteLog, updateLog }: OverviewViewProps) {
   const [query,        setQuery]        = useState("");
   const [filterCat,    setFilterCat]    = useState("All");
   const [filterHosp,   setFilterHosp]   = useState("All");
   const [deleteTarget, setDeleteTarget] = useState<any>(null); 
   const [deletePw,     setDeletePw]     = useState("");
+  const [editTarget,   setEditTarget]   = useState<any>(null);
+  const [editPw,       setEditPw]       = useState("");
+  const [isEditing,    setIsEditing]    = useState(false);
   const [pwError,      setPwError]      = useState(false);
+  const [editData,     setEditData]     = useState<any>(null);
+  const [reassignTarget, setReassignTarget] = useState<any>(null);
+  const [reassignPw,   setReassignPw]   = useState("");
 
   const openDeleteModal  = (log: any) => { setDeleteTarget(log); setDeletePw(""); setPwError(false); };
   const closeDeleteModal = ()    => { setDeleteTarget(null); setDeletePw(""); setPwError(false); };
+
+  const openEditModal = (log: any) => { 
+    setEditTarget(log); 
+    setEditPw(""); 
+    setPwError(false); 
+    setIsEditing(false);
+    setEditData({ ...log });
+  };
+  const closeEditModal = () => { setEditTarget(null); setEditPw(""); setPwError(false); setIsEditing(false); setEditData(null); };
+
+  const openReassignModal = (log: any) => {
+    setReassignTarget(log);
+    setReassignPw("");
+    setPwError(false);
+    setIsEditing(false);
+  };
+  const closeReassignModal = () => { setReassignTarget(null); setReassignPw(""); setPwError(false); setIsEditing(false); };
 
   const confirmDelete = () => {
     if (deletePw === config.password) {
@@ -30,6 +54,39 @@ export function OverviewView({ logs, config, showToast, deleteLog }: OverviewVie
       setPwError(true);
       setDeletePw("");
     }
+  };
+
+  const confirmEditPw = () => {
+    if (editPw === config.password) {
+      setIsEditing(true);
+      setPwError(false);
+    } else {
+      setPwError(true);
+      setEditPw("");
+    }
+  };
+
+  const confirmReassignPw = () => {
+    if (reassignPw === config.password) {
+      setIsEditing(true);
+      setPwError(false);
+    } else {
+      setPwError(true);
+      setReassignPw("");
+    }
+  };
+
+  const saveEdit = async () => {
+    if (!editData.notes.trim()) return showToast("Notes cannot be empty");
+    await updateLog(editTarget.id, editData);
+    showToast("Entry updated");
+    closeEditModal();
+  };
+
+  const quickReassign = async (newCat: string) => {
+    await updateLog(reassignTarget.id, { ...reassignTarget, category: newCat });
+    showToast(`Reassigned to ${newCat}`);
+    closeReassignModal();
   };
 
   const catColor = (name: string) => config.categories.find((c: any) => c.name === name)?.color || "#475569";
@@ -168,6 +225,242 @@ export function OverviewView({ logs, config, showToast, deleteLog }: OverviewVie
             </motion.div>
           </motion.div>
         )}
+
+        {editTarget && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center p-6" 
+            onClick={closeEditModal}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()} 
+              className="bg-white rounded p-7 w-full max-w-[400px] border-t-4 border-[#e8b84b] shadow-2xl"
+            >
+              {!isEditing ? (
+                <>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-9 h-9 bg-amber-50 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Pencil size={18} className="text-[#e8b84b]" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-[#0f0f0f]">Edit Entry</h3>
+                      <p className="text-xs text-[#7a7060] mt-0.5">Enter password to unlock</p>
+                    </div>
+                  </div>
+
+                  <input
+                    autoFocus
+                    type="password"
+                    placeholder="Password"
+                    value={editPw}
+                    onChange={e => { setEditPw(e.target.value); setPwError(false); }}
+                    onKeyDown={e => e.key === "Enter" && confirmEditPw()}
+                    className={`w-full p-3 bg-[#f9f7f4] border rounded font-sans text-sm text-center tracking-[0.3em] outline-none mb-2 ${
+                      pwError ? 'border-[#dc2626] bg-red-50' : 'border-[#d6cfc4]'
+                    }`}
+                  />
+                  {pwError && (
+                    <div className="text-[11px] text-[#dc2626] font-semibold text-center mb-3">
+                      Incorrect password
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 mt-2">
+                    <button 
+                      onClick={closeEditModal} 
+                      className="flex-1 p-2.5 bg-zinc-100 text-zinc-700 rounded font-semibold text-sm cursor-pointer hover:bg-zinc-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={confirmEditPw} 
+                      className="flex-1 p-2.5 bg-[#e8b84b] text-[#1a1a2e] rounded font-bold text-sm cursor-pointer hover:bg-[#f0c970] transition-colors shadow-md"
+                    >
+                      Unlock
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-bold text-[#0f0f0f]">Edit Details</h3>
+                    <button onClick={closeEditModal} className="text-zinc-400 hover:text-zinc-600">
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#7a7060] block mb-1">Site</label>
+                      <select 
+                        value={editData.hospital}
+                        onChange={e => setEditData({ ...editData, hospital: e.target.value })}
+                        className="w-full p-2.5 bg-[#f9f7f4] border border-[#d6cfc4] rounded text-sm outline-none"
+                      >
+                        {config.hospitals.map((h: string) => <option key={h} value={h}>{h}</option>)}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#7a7060] block mb-1">Category</label>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {config.categories.map((c: any) => (
+                          <button
+                            key={c.name}
+                            onClick={() => setEditData({ ...editData, category: c.name })}
+                            className={`p-2 text-[10px] font-bold rounded border transition-all ${
+                              editData.category === c.name 
+                                ? 'bg-[#1a1a2e] text-white border-[#1a1a2e]' 
+                                : 'bg-white text-[#7a7060] border-[#d6cfc4] hover:bg-zinc-50'
+                            }`}
+                          >
+                            {c.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#7a7060] block mb-1">Notes</label>
+                      <textarea 
+                        value={editData.notes}
+                        onChange={e => setEditData({ ...editData, notes: e.target.value })}
+                        rows={4}
+                        className="w-full p-2.5 bg-[#f9f7f4] border border-[#d6cfc4] rounded text-sm outline-none resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 mt-2">
+                    <button 
+                      onClick={closeEditModal} 
+                      className="flex-1 p-2.5 bg-zinc-100 text-zinc-700 rounded font-semibold text-sm cursor-pointer hover:bg-zinc-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={saveEdit} 
+                      className="flex-1 p-2.5 bg-[#1a1a2e] text-white rounded font-bold text-sm cursor-pointer hover:bg-zinc-800 transition-colors shadow-md flex items-center justify-center gap-2"
+                    >
+                      <Check size={16} /> Save Changes
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+
+        {reassignTarget && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center p-6" 
+            onClick={closeReassignModal}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()} 
+              className="bg-white rounded p-7 w-full max-w-[340px] border-t-4 border-[#e8b84b] shadow-2xl"
+            >
+              {!isEditing ? (
+                <>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-9 h-9 bg-amber-50 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Share size={18} className="text-[#e8b84b] rotate-90" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-[#0f0f0f]">Reassign Category</h3>
+                      <p className="text-xs text-[#7a7060] mt-0.5">Enter password to unlock</p>
+                    </div>
+                  </div>
+
+                  <input
+                    autoFocus
+                    type="password"
+                    placeholder="Password"
+                    value={reassignPw}
+                    onChange={e => { setReassignPw(e.target.value); setPwError(false); }}
+                    onKeyDown={e => e.key === "Enter" && confirmReassignPw()}
+                    className={`w-full p-3 bg-[#f9f7f4] border rounded font-sans text-sm text-center tracking-[0.3em] outline-none mb-2 ${
+                      pwError ? 'border-[#dc2626] bg-red-50' : 'border-[#d6cfc4]'
+                    }`}
+                  />
+                  {pwError && (
+                    <div className="text-[11px] text-[#dc2626] font-semibold text-center mb-3">
+                      Incorrect password
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 mt-2">
+                    <button 
+                      onClick={closeReassignModal} 
+                      className="flex-1 p-2.5 bg-zinc-100 text-zinc-700 rounded font-semibold text-sm cursor-pointer hover:bg-zinc-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={confirmReassignPw} 
+                      className="flex-1 p-2.5 bg-[#e8b84b] text-[#1a1a2e] rounded font-bold text-sm cursor-pointer hover:bg-[#f0c970] transition-colors shadow-md"
+                    >
+                      Unlock
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-bold text-[#0f0f0f]">Select New Category</h3>
+                    <button onClick={closeReassignModal} className="text-zinc-400 hover:text-zinc-600">
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <div className="bg-[#f9f7f4] border border-[#d6cfc4] rounded p-3 mb-2">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-[#7a7060] mb-1">Current</div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: catColor(reassignTarget.category) }} />
+                      <span className="text-sm font-semibold">{reassignTarget.category}</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {config.categories.map((c: any) => (
+                      <button
+                        key={c.name}
+                        onClick={() => quickReassign(c.name)}
+                        className={`p-3 text-xs font-bold rounded border transition-all flex items-center gap-2 ${
+                          reassignTarget.category === c.name 
+                            ? 'bg-[#1a1a2e] text-white border-[#1a1a2e] opacity-50 cursor-not-allowed' 
+                            : 'bg-white text-[#0f0f0f] border-[#d6cfc4] hover:bg-zinc-50'
+                        }`}
+                        disabled={reassignTarget.category === c.name}
+                      >
+                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.color }} />
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button 
+                    onClick={closeReassignModal} 
+                    className="w-full p-2.5 bg-zinc-100 text-zinc-700 rounded font-semibold text-sm cursor-pointer hover:bg-zinc-200 transition-colors mt-2"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* Search & Export */}
@@ -247,18 +540,25 @@ export function OverviewView({ logs, config, showToast, deleteLog }: OverviewVie
                   style={{ borderLeftColor: color }}
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <span 
-                      className="px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase text-white rounded"
+                    <button 
+                      onClick={() => openReassignModal(log)}
+                      className="px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase text-white rounded hover:opacity-80 transition-opacity cursor-pointer flex items-center gap-1.5"
                       style={{ backgroundColor: color }}
                     >
                       {log.category}
-                    </span>
+                    </button>
                     <div className="flex gap-1">
                       <button 
                         onClick={() => handleShare(log)} 
                         className="p-1.5 text-[#7a7060] hover:text-[#1a1a2e] transition-colors"
                       >
                         <Share size={16} />
+                      </button>
+                      <button 
+                        onClick={() => openEditModal(log)} 
+                        className="p-1.5 text-[#7a7060] hover:text-[#e8b84b] transition-colors"
+                      >
+                        <Pencil size={16} />
                       </button>
                       <button 
                         onClick={() => openDeleteModal(log)} 

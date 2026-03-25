@@ -272,6 +272,14 @@ function MainApp({ user }: { user: { uid: string; email: string | null } }) {
     }
   }, [user]);
 
+  const updateLog = useCallback(async (id: string, entry: any) => {
+    try {
+      await setDoc(doc(db, "logs", id), entry, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `logs/${id}`, user.uid);
+    }
+  }, [user]);
+
   const updateConfig = useCallback(async (next: any) => {
     try {
       await setDoc(doc(db, "config", "global"), next);
@@ -283,7 +291,7 @@ function MainApp({ user }: { user: { uid: string; email: string | null } }) {
 
   const showToast    = useCallback((m: string) => setToast(m), []);
 
-  const labels: Record<string, string> = { entry: "New Entry", overview: "Overview", admin: "Administration" };
+  const labels: Record<string, string> = { entry: "", overview: "Overview", admin: "Administration" };
 
   if (!ready) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -301,14 +309,14 @@ function MainApp({ user }: { user: { uid: string; email: string | null } }) {
       {/* Header */}
       <header className="bg-[#1a1a2e] px-5 py-4 flex justify-between items-baseline sticky top-0 z-30 border-b-4 border-[#e8b84b] shadow-lg">
         <h1 className="text-xl font-bold text-white">{labels[tab]}</h1>
-        <div className="flex flex-col items-end">
+        <div className="flex flex-col items-end flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold tracking-[0.25em] uppercase text-[#e8b84b]">CT Happenings</span>
+            <span className="text-sm font-black tracking-[0.2em] uppercase text-[#e8b84b]">CT Happenings</span>
             <button onClick={() => signOut(auth)} className="text-white/40 hover:text-white/60 transition-colors">
-              <LogOut size={12} />
+              <LogOut size={14} />
             </button>
           </div>
-          <span className="text-[8px] font-medium text-white/40 uppercase tracking-tighter">Field Operations Log</span>
+          <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">Field Operations Log</span>
         </div>
       </header>
 
@@ -322,7 +330,7 @@ function MainApp({ user }: { user: { uid: string; email: string | null } }) {
             transition={{ duration: 0.2 }}
           >
             {tab === "entry"    && <EntryView    config={config} addLog={addLog}             showToast={showToast} />}
-            {tab === "overview" && <OverviewView logs={logs}     config={config}              showToast={showToast} deleteLog={deleteLog} />}
+            {tab === "overview" && <OverviewView logs={logs}     config={config}              showToast={showToast} deleteLog={deleteLog} updateLog={updateLog} />}
             {tab === "admin"    && <AdminView    config={config} updateConfig={updateConfig}  showToast={showToast} userEmail={user.email} />}
           </motion.div>
         </AnimatePresence>
@@ -330,7 +338,7 @@ function MainApp({ user }: { user: { uid: string; email: string | null } }) {
 
       {/* Bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-[#1a1a2e] border-t-4 border-[#e8b84b] flex justify-around pt-2 pb-4 z-40 shadow-[0_-10px_30px_rgba(0,0,0,0.3)]">
-        <NavItem icon={<ClipboardList size={22} />} label="Log"      active={tab === "entry"}    onClick={() => setTab("entry")} />
+        <NavItem icon={<ClipboardList size={22} />} label={`Log (${config.hospitals.length})`} active={tab === "entry"} onClick={() => setTab("entry")} />
         <NavItem icon={<PieChart size={22} />}      label="Overview" active={tab === "overview"} onClick={() => setTab("overview")} />
         <NavItem icon={<Settings size={22} />}      label="Admin"    active={tab === "admin"}    onClick={() => setTab("admin")} />
       </nav>
