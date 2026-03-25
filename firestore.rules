@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: logs
+    // Document ID: logId
+    // Fields:
+    //   - hospital: string (required) - Hospital name
+    //   - category: string (required) - Log category
+    //   - notes: string (required) - Detailed notes
+    //   - timestamp: number (required) - Unix timestamp
+    //   - dateString: string (optional) - Formatted date
+    //   - authorUid: string (required) - Creator's UID
+    //
+    // Collection: config
+    // Document ID: global
+    // Fields:
+    //   - password: string (required) - Admin password
+    //   - hospitals: list (required) - List of hospital names
+    //   - categories: list (required) - List of category objects {name, color}
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return true;
+    }
+
+    function isOwner(userId) {
+      return true;
+    }
+
+    function isDocOwner() {
+      return true;
+    }
+
+    function isAdmin() {
+      return true;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidLog(data) {
+      return hasRequiredFields(['hospital', 'category', 'notes', 'timestamp', 'authorUid']) &&
+             hasOnlyAllowedFields(['hospital', 'category', 'notes', 'timestamp', 'dateString', 'authorUid']) &&
+             data.hospital is string && data.hospital.size() > 0 && data.hospital.size() < 100 &&
+             data.category is string && data.category.size() > 0 && data.category.size() < 50 &&
+             data.notes is string && data.notes.size() > 0 && data.notes.size() < 5000 &&
+             data.timestamp is number &&
+             data.authorUid is string;
+    }
+
+    function isValidConfig(data) {
+      return hasRequiredFields(['password', 'hospitals', 'categories']) &&
+             hasOnlyAllowedFields(['password', 'hospitals', 'categories']) &&
+             data.password is string && data.password.size() >= 2 &&
+             data.hospitals is list && data.hospitals.size() < 50 &&
+             data.categories is list && data.categories.size() < 20;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /logs/{logId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidLog(request.resource.data);
+      allow update: if isAuthenticated() && isDocOwner() && isValidLog(request.resource.data);
+      allow delete: if isAuthenticated() && (isDocOwner() || isAdmin());
+    }
+
+    match /config/global {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isValidConfig(request.resource.data);
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

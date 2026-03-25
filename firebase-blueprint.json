@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "Log": {
+      "title": "Log",
+      "description": "A single field log entry.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID for the log entry." },
+        "hospital": { "type": "string", "description": "The hospital site name." },
+        "category": { "type": "string", "description": "The category of the log." },
+        "notes": { "type": "string", "description": "Detailed notes or observations." },
+        "timestamp": { "type": "number", "description": "Unix timestamp of the entry." },
+        "dateString": { "type": "string", "description": "Human-readable date string." },
+        "authorUid": { "type": "string", "description": "The UID of the user who created the log." }
+      },
+      "required": ["id", "hospital", "category", "notes", "timestamp", "authorUid"]
+    },
+    "Config": {
+      "title": "Config",
+      "description": "Global application configuration.",
+      "type": "object",
+      "properties": {
+        "password": { "type": "string", "description": "Admin password for settings." },
+        "hospitals": { "type": "array", "items": { "type": "string" }, "description": "List of available hospital sites." },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "color": { "type": "string" }
+            }
+          },
+          "description": "List of log categories with colors."
+        }
+      },
+      "required": ["password", "hospitals", "categories"]
+    }
+  },
+  "firestore": {
+    "/logs/{logId}": {
+      "schema": "Log",
+      "description": "Collection of all field logs."
+    },
+    "/config/global": {
+      "schema": "Config",
+      "description": "Global configuration document."
+    }
+  }
+}
