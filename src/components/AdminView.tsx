@@ -9,10 +9,9 @@ export interface AdminViewProps {
   updateConfig: (c: any) => Promise<void>;
   showToast: (m: string) => void;
   userEmail: string | null;
-  signInWithGoogle: () => Promise<void>;
 }
 
-export function AdminView({ config, updateConfig, showToast, userEmail, signInWithGoogle }: AdminViewProps) {
+export function AdminView({ config, updateConfig, showToast, userEmail }: AdminViewProps) {
   const [authed,       setAuthed]       = useState(false);
   const [pw,           setPw]           = useState("");
   const [local,        setLocal]        = useState(config);
@@ -28,10 +27,6 @@ export function AdminView({ config, updateConfig, showToast, userEmail, signInWi
     e.preventDefault();
     if (pw === config.password) { setAuthed(true); setPw(""); }
     else showToast("Incorrect password");
-  };
-
-  const handleGoogleLogin = async () => {
-    await signInWithGoogle();
   };
 
   const save = async () => { await updateConfig(local); showToast("Configuration updated"); };
@@ -73,22 +68,6 @@ export function AdminView({ config, updateConfig, showToast, userEmail, signInWi
             Unlock
           </button>
         </form>
-
-        <div className="mt-8 pt-6 border-t border-[#d6cfc4]">
-          <p className="text-[10px] font-bold text-[#7a7060] uppercase tracking-widest mb-4">Or Authenticate</p>
-          <button 
-            onClick={handleGoogleLogin}
-            className="w-full p-3 bg-white border border-[#d6cfc4] text-[#1a1a2e] text-sm font-bold rounded flex items-center justify-center gap-3 hover:bg-zinc-50 transition-colors cursor-pointer"
-          >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" referrerPolicy="no-referrer" />
-            {userEmail ? "Signed in as " + userEmail.split('@')[0] : "Sign in with Google"}
-          </button>
-          {!userEmail && (
-            <p className="text-[9px] text-[#7a7060] mt-3 italic">
-              Required for saving changes to the database.
-            </p>
-          )}
-        </div>
       </motion.div>
     </div>
   );

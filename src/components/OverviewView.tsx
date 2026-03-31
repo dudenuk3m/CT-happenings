@@ -24,7 +24,6 @@ export function OverviewView({ logs, config, showToast, deleteLog, updateLog }: 
   const [editData,     setEditData]     = useState<any>(null);
   const [reassignTarget, setReassignTarget] = useState<any>(null);
   const [reassignPw,   setReassignPw]   = useState("");
-  const [selectedCat,  setSelectedCat]  = useState<string | null>(null);
 
   const openDeleteModal  = (log: any) => { setDeleteTarget(log); setDeletePw(""); setPwError(false); };
   const closeDeleteModal = ()    => { setDeleteTarget(null); setDeletePw(""); setPwError(false); };
@@ -41,11 +40,10 @@ export function OverviewView({ logs, config, showToast, deleteLog, updateLog }: 
   const openReassignModal = (log: any) => {
     setReassignTarget(log);
     setReassignPw("");
-    setSelectedCat(null);
     setPwError(false);
     setIsEditing(false);
   };
-  const closeReassignModal = () => { setReassignTarget(null); setReassignPw(""); setSelectedCat(null); setPwError(false); setIsEditing(false); };
+  const closeReassignModal = () => { setReassignTarget(null); setReassignPw(""); setPwError(false); setIsEditing(false); };
 
   const confirmDelete = () => {
     if (deletePw === config.password) {
@@ -85,10 +83,9 @@ export function OverviewView({ logs, config, showToast, deleteLog, updateLog }: 
     closeEditModal();
   };
 
-  const saveReassign = async () => {
-    if (!selectedCat) return showToast("Please select a category");
-    await updateLog(reassignTarget.id, { ...reassignTarget, category: selectedCat });
-    showToast(`Reassigned to ${selectedCat}`);
+  const quickReassign = async (newCat: string) => {
+    await updateLog(reassignTarget.id, { ...reassignTarget, category: newCat });
+    showToast(`Reassigned to ${newCat}`);
     closeReassignModal();
   };
 
@@ -439,13 +436,11 @@ export function OverviewView({ logs, config, showToast, deleteLog, updateLog }: 
                     {config.categories.map((c: any) => (
                       <button
                         key={c.name}
-                        onClick={() => setSelectedCat(c.name)}
+                        onClick={() => quickReassign(c.name)}
                         className={`p-3 text-xs font-bold rounded border transition-all flex items-center gap-2 ${
                           reassignTarget.category === c.name 
                             ? 'bg-[#1a1a2e] text-white border-[#1a1a2e] opacity-50 cursor-not-allowed' 
-                            : selectedCat === c.name
-                              ? 'bg-[#e8b84b] text-[#1a1a2e] border-[#e8b84b]'
-                              : 'bg-white text-[#0f0f0f] border-[#d6cfc4] hover:bg-zinc-50'
+                            : 'bg-white text-[#0f0f0f] border-[#d6cfc4] hover:bg-zinc-50'
                         }`}
                         disabled={reassignTarget.category === c.name}
                       >
@@ -455,25 +450,12 @@ export function OverviewView({ logs, config, showToast, deleteLog, updateLog }: 
                     ))}
                   </div>
 
-                  <div className="flex gap-2 mt-2">
-                    <button 
-                      onClick={closeReassignModal} 
-                      className="flex-1 p-2.5 bg-zinc-100 text-zinc-700 rounded font-semibold text-sm cursor-pointer hover:bg-zinc-200 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      onClick={saveReassign} 
-                      disabled={!selectedCat}
-                      className={`flex-1 p-2.5 rounded font-bold text-sm transition-colors shadow-md flex items-center justify-center gap-2 ${
-                        selectedCat 
-                          ? 'bg-[#1a1a2e] text-white hover:bg-zinc-800 cursor-pointer' 
-                          : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                      }`}
-                    >
-                      <Check size={16} /> Save
-                    </button>
-                  </div>
+                  <button 
+                    onClick={closeReassignModal} 
+                    className="w-full p-2.5 bg-zinc-100 text-zinc-700 rounded font-semibold text-sm cursor-pointer hover:bg-zinc-200 transition-colors mt-2"
+                  >
+                    Cancel
+                  </button>
                 </div>
               )}
             </motion.div>

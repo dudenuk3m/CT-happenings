@@ -32,9 +32,7 @@ import {
   onAuthStateChanged, 
   signOut,
   User,
-  signInAnonymously,
-  signInWithPopup,
-  GoogleAuthProvider
+  signInAnonymously
 } from "firebase/auth";
 import { db, auth } from "./firebase";
 
@@ -152,15 +150,6 @@ function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode; labe
 export default function App() {
   const [user, setUser] = useState<{ uid: string; email: string | null } | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
-  const signInWithGoogle = useCallback(async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      setUser({ uid: result.user.uid, email: result.user.email });
-    } catch (error) {
-      console.error("Failed to sign in with Google:", error);
-    }
-  }, []);
 
   useEffect(() => {
     // Check for existing guest ID or create new one
@@ -169,7 +158,8 @@ export default function App() {
       guestId = "guest-" + Math.random().toString(36).substring(7);
       localStorage.setItem("ct_guest_id", guestId);
     }
-
+    
+    // Check if user is already logged in via Firebase (e.g. from previous Google session)
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       if (u) {
         setUser({ uid: u.uid, email: u.email });
@@ -202,12 +192,12 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <MainApp user={user} signInWithGoogle={signInWithGoogle} />
+      <MainApp user={user} />
     </ErrorBoundary>
   );
 }
 
-function MainApp({ user, signInWithGoogle }: { user: { uid: string; email: string | null }; signInWithGoogle: () => Promise<void> }) {
+function MainApp({ user }: { user: { uid: string; email: string | null } }) {
   const [logs,   setLogs]   = useState<any[]>([]);
   const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [tab,    setTab]    = useState("entry");
@@ -284,8 +274,7 @@ function MainApp({ user, signInWithGoogle }: { user: { uid: string; email: strin
 
   const updateLog = useCallback(async (id: string, entry: any) => {
     try {
-      const { id: _, ...cleanEntry } = entry;
-      await setDoc(doc(db, "logs", id), cleanEntry, { merge: true });
+      await setDoc(doc(db, "logs", id), entry, { merge: true });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `logs/${id}`, user.uid);
     }
@@ -342,7 +331,7 @@ function MainApp({ user, signInWithGoogle }: { user: { uid: string; email: strin
           >
             {tab === "entry"    && <EntryView    config={config} addLog={addLog}             showToast={showToast} />}
             {tab === "overview" && <OverviewView logs={logs}     config={config}              showToast={showToast} deleteLog={deleteLog} updateLog={updateLog} />}
-            {tab === "admin"    && <AdminView    config={config} updateConfig={updateConfig}  showToast={showToast} userEmail={user.email} signInWithGoogle={signInWithGoogle} />}
+            {tab === "admin"    && <AdminView    config={config} updateConfig={updateConfig}  showToast={showToast} userEmail={user.email} />}
           </motion.div>
         </AnimatePresence>
       </main>

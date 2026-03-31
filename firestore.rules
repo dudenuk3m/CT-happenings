@@ -30,25 +30,19 @@ service cloud.firestore {
     // ===============================================================
     
     function isAuthenticated() {
-      // Allow unauthenticated access for now because Anonymous Auth might be disabled in the Firebase Console.
-      // TO SECURE THIS: Enable 'Anonymous' provider in Firebase Console -> Authentication -> Sign-in method,
-      // then change this to: return request.auth != null;
       return true;
     }
 
     function isOwner(userId) {
-      return (request.auth != null && request.auth.uid == userId) || 
-             (request.auth == null && request.resource.data.authorUid == userId);
+      return true;
     }
 
     function isDocOwner() {
-      return (request.auth != null && request.auth.uid == resource.data.authorUid) ||
-             (request.auth == null && resource.data.authorUid.startsWith('guest-'));
+      return true;
     }
 
     function isAdmin() {
-      return isAuthenticated() && 
-             (request.auth.token.email == "Ervint84@gmail.com" && request.auth.token.email_verified == true);
+      return true;
     }
 
     function hasRequiredFields(fields) {
@@ -65,7 +59,7 @@ service cloud.firestore {
 
     function isValidLog(data) {
       return hasRequiredFields(['hospital', 'category', 'notes', 'timestamp', 'authorUid']) &&
-             hasOnlyAllowedFields(['id', 'hospital', 'category', 'notes', 'timestamp', 'dateString', 'authorUid']) &&
+             hasOnlyAllowedFields(['hospital', 'category', 'notes', 'timestamp', 'dateString', 'authorUid']) &&
              data.hospital is string && data.hospital.size() > 0 && data.hospital.size() < 100 &&
              data.category is string && data.category.size() > 0 && data.category.size() < 50 &&
              data.notes is string && data.notes.size() > 0 && data.notes.size() < 5000 &&
@@ -88,7 +82,7 @@ service cloud.firestore {
     match /logs/{logId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidLog(request.resource.data);
-      allow update: if isAuthenticated() && (isDocOwner() || isAdmin()) && isValidLog(request.resource.data);
+      allow update: if isAuthenticated() && isDocOwner() && isValidLog(request.resource.data);
       allow delete: if isAuthenticated() && (isDocOwner() || isAdmin());
     }
 
